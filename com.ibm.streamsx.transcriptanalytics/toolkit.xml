@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<toolkitModel xmlns="http://www.ibm.com/xmlns/prod/streams/spl/toolkit" productVersion="4.2.0.0" xmlns:common="http://www.ibm.com/xmlns/prod/streams/spl/common" xmlns:ti="http://www.ibm.com/xmlns/prod/streams/spl/toolkitInfo" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+  <toolkit name="com.ibm.streamsx.transcriptanalytics" requiredProductVersion="4.0.1.0" version="1.0.0">
+    <description>
+	Toolkit contains operators related to transcript analytics. Operator scored incoming tuple and assign a score based on how closely its match to machine generated messages in transcripts.  
+
+    </description>
+    <uriTable>
+      <uri index="1" value="com.ibm.streamsx.transcriptanalytics/DistanceModelScore"/>
+    </uriTable>
+    <namespace name="com.ibm.streamsx.transcriptanalytics">
+      <primitiveOp language="Java" modelUriIndex="1" name="DistanceModelScore" public="true">
+        <description>This operator is used to compute distance of a text from model consisting of set of text. Distance represents how close the text is to the cluster or topic</description>
+        <parameter expressionMode="Constant" name="vmArg" optional="true" type="rstring">
+          <description>
+Specifies command-line arguments that are passed to the Java virtual machine that the operator runs within.
+</description>
+        </parameter>
+        <parameter cardinality="1" expressionMode="AttributeFree" name="minSetSize" optional="true" type="int32">
+          <description>The min number of words in the set for which scoring would be done. default =5</description>
+        </parameter>
+        <parameter cardinality="1" expressionMode="AttributeFree" name="modelPath" optional="false" type="rstring">
+          <description>The path containing the persisted analytic model</description>
+        </parameter>
+        <parameter cardinality="1" expressionMode="Attribute" name="testDataAttr" optional="false" type="rstring">
+          <description>The attribute which contains the text data which needs to be scored</description>
+        </parameter>
+        <inputPort maxNumPorts="1" minNumPorts="1" optional="false" windowPunctInputMode="Oblivious">
+          <description>This input port is required. The operator expects an attribute of type rstring that will be used as input distance scoring model.</description>
+          <windowPolicy>NonWindowed</windowPolicy>
+        </inputPort>
+        <outputPort expressionMode="Nonexistent" maxNumPorts="1" minNumPorts="1" optional="false" windowPunctOutputMode="Free">
+          <description>This output port is required. The operator passes through all attributes on the input port as-is to the output port. In addition, it expects an attribute called 'score' of type float64 '</description>
+        </outputPort>
+      </primitiveOp>
+    </namespace>
+    <sabFiles>
+      <ti:include path="toolkit.xml" root="toolkitDir"/>
+      <ti:include path="impl/java/lib/**" root="toolkitDir"/>
+      <ti:include path="impl/java/bin/**" root="toolkitDir"/>
+      <ti:include path="impl/bin/**" root="toolkitDir"/>
+      <ti:include path="impl/lib/**" root="toolkitDir"/>
+      <ti:include path="impl/nl/*.dat" root="toolkitDir"/>
+      <ti:include path="etc/**" root="toolkitDir"/>
+      <ti:include path="lib/**" root="toolkitDir"/>
+      <ti:include path="nl/**" root="toolkitDir"/>
+      <ti:include path="opt/**" root="toolkitDir"/>
+    </sabFiles>
+  </toolkit>
+
+</toolkitModel>

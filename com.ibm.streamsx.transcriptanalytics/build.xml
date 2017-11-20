@@ -1,0 +1,125 @@
+<project name="com.ibm.streamsx.transcriptanalytics" default="all">
+	<description>
+		Build script to compile the transcriptanalytics Toolkit
+	</description>
+
+	<!-- check streams installation -->
+	<property environment="env"/>
+	<fail unless="env.STREAMS_INSTALL" message="No streams installation found. Exiting!"/>
+	<!-- properties directories ... -->
+	<property name="maven.bin"         value="${env.M2_HOME}/bin/mvn"/>
+	<property name="src.dir"           location="impl/java/src"/>
+	
+	<!-- use a non-standard place to avoid that the class files are put into the sab file -->
+	
+	<property name="build.dir"         location="impl/java/build"/>
+	
+	<!-- We must use a jar because class files because class fieles are not included in the product -->
+	<property name="lib.dir"           location="lib"/>
+	
+	<property name="ext.downloads.dir" location="opt/lib"/>
+	<property name="gensrc.dir"        location="impl/java/src-gen"/>
+	<property name="jarfile"           value="streams-transcriptanalytics.jar"/>
+	<property name="spl-mt"            value="${env.STREAMS_INSTALL}/bin/spl-make-toolkit"/>
+	<!-- class pathes -->
+	<path id="cp.streams">
+		<pathelement location="${env.STREAMS_INSTALL}/lib/com.ibm.streams.operator.samples.jar"/>
+	</path>
+	<path id="cp.ext.libs">
+		<fileset dir="${ext.downloads.dir}"/>
+	</path>
+	<path id="cp.compile">
+		<path refid="cp.streams"/>
+		<path refid="cp.ext.libs"/>
+	</path>
+
+	<!-- Main targets -->
+	<target name="all" depends="build"
+		description="Main Target: Build all artifacts - incremental build">
+	</target>
+
+	<target name="build" depends="jar"
+		description="Main Target: Build all artifacts - incremental build">
+		<echo message="Tookit to index: ${basedir}"/>
+		<exec executable="${spl-mt}" failonerror="true">
+			<arg value="-i"/>
+			<arg value="${basedir}"/>
+		</exec>
+	</target>
+
+	<target name="clean" depends="maven-deps-clean"
+		description="Main Target: Clean all generated and downloaded files, clean toolkit index">
+	</target>
+
+	<!-- Sub Targets - Build-->
+	<!-- check maven installation -->
+	<target name="init">
+		<fail unless="env.M2_HOME" message="Environment variable M2_HOME not set. Please set this to point to the path of maven home directory"/>
+		<echo>Maven environment ${env.M2_HOME}</echo>
+	</target>
+
+	<!-- Downloads libraries using maven -->
+	<target name="maven-deps" depends="init"
+		description="Download required libraries">
+		<fail unless="env.M2_HOME" message="Environment variable M2_HOME not set. Please set this to point to the path of maven home directory" />
+		<mkdir dir="${ext.downloads.dir}" />
+		<exec executable="${maven.bin}" failonerror="true">
+			<arg value="dependency:copy-dependencies" />
+			<arg value="-DoutputDirectory=${ext.downloads.dir}" />
+		</exec>
+	</target>
+
+	<!-- Compile sources -->
+	<target name="compile" depends="maven-deps"
+		description="Compile all sources">
+		<mkdir dir="${build.dir}"/>
+		<mkdir dir="${gensrc.dir}"/>
+		<javac srcdir="${src.dir}" destdir="${build.dir}" debug="true" includeantruntime="no" excludes="com/ibm/streamsx/transcriptanalytics/**/*$StreamsModel.java">
+			<classpath>
+				<path refid="cp.compile"/>
+			</classpath>
+			<compilerarg line="-s ${gensrc.dir}"/>
+		</javac>
+	</target>
+
+	<!-- copy resources into build dir -->
+	<!-- <target name="copy">
+		<copy todir="${build.dir}">
+			<fileset dir="${src.dir}" excludes="**/*.java" includes="com/ibm/streamsx/transcriptanalytics/*.properties"/>
+		</copy>
+	</target> -->
+	
+	<target name="jar" depends="compile">
+		<jar destfile="${lib.dir}/${jarfile}" filesonly="true">
+			<fileset dir="${build.dir}" includes="com/ibm/streamsx/transcriptanalytics/**"/>
+			<fileset dir="${src.dir}" includes="com/ibm/streamsx/transcriptanalytics/*.properties"/>
+		</jar>
+	</target>
+
+	<!-- Sub Targets - Clean-->
+	<target name="toolkit-index-clean"
+		description="Clean the toolkit index only">
+		<exec executable="${spl-mt}" failonerror="true">
+			<arg value="-c"/>
+			<arg value="-i"/>
+			<arg value="${basedir}"/>
+		</exec>
+	</target>
+
+	<target name="jar-clean" depends="toolkit-index-clean"
+		description="Clean jar library artifacts and all dependencies">
+		<delete dir="${lib.dir}"/>
+	</target>
+
+	<target name="compile-clean" depends="jar-clean"
+		description="Clean compiler generated artifacts and all dependencies">
+		<delete dir="${build.dir}"/>
+		<delete dir="${gensrc.dir}"/>
+	</target>
+
+	<target name="maven-deps-clean" depends="compile-clean"
+		description="Clean downloaded libraries and all dependencies">
+		<delete dir="${ext.downloads.dir}"/>
+	</target>
+
+</project>

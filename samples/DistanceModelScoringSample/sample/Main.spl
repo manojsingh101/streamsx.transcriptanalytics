@@ -1,0 +1,116 @@
+/**
+ * Copyright (C) 2017 International Business Machines Corporation
+ * All Rights Reserved
+ */
+namespace sample;
+
+/**
+ * This is a sample application to demo the use of DistanceModelScore operator.
+ * The application takes a csv file with two identifiers (ivrcallid, channel) and text data called utterance.
+ * The DistanceModelScore operator passes the text utterance data as input to a model. The model consists of
+ * a list of sentences derived from a topic (in this case, machine generated messages for a telecom customer care center).
+ * The model computes the distance of input text from the topic and returns a float64 value.
+ * The Aggregate operator maintains a window of these tuples partitioned by the identifier, ivrcallid and channel, and outputs average distance 
+ * across the window. The goal of the aggregation is to identify different a particular partition as belonging to particular machine channel 
+ * if the average distance of the parition window is above a threshold.
+ */
+
+use com.ibm.streamsx.transcriptanalytics::DistanceModelScore ;
+use spl.collection::*;
+
+// type to hold the sentiment scores for each channel for aggregation
+type ScoreContext = list<float64> scoreList;
+
+// format of the csv input file
+type InputType = tuple<rstring ivrcallid, rstring channel, rstring utterance>;
+
+//type of the output of naive bayes sentiment operator
+type ScoredUtteranceType = InputType,tuple<float64 score>;
+
+// type for the output after sentiment aggregation
+type AvgScoredUtteranceType = ScoredUtteranceType, tuple<float64 avgScore>;
+
+// Custom init function for Aggregate operator
+boolean init(mutable ScoreContext ctx) {
+   clearM(ctx.scoreList);
+   return false;
+}
+
+/**
+ * custom process operator for Aggregate operator
+ * It groups the utterances by channels and accumulates the sentiment score 
+ * probabilities as list of list of floats for each channel. 
+ */
+boolean process(tuple<ScoredUtteranceType>  scoredUtterances, mutable ScoreContext ctx){
+   appendM(ctx.scoreList,scoredUtterances.score);
+  return false;
+}
+
+/**
+ * Custom result function for Aggregate operator
+ * For each set of utterances, it takes average of negative and positive sentiments for each channel 
+ * and picks min(negative,positive) sentiment for each channel.
+ * Then picks the minimum from across the channels
+ */
+float64 result(ScoreContext ctx) {
+    mutable float64 average =0f; // set to max value
+    mutable int32 numNonNegative = 0;
+    for (float64 score in ctx.scoreList) {
+        if (score >= 0f) {
+            average += score;
+            numNonNegative++;
+        }
+    }
+
+    return average / (float64)numNonNegative;
+  
+}
+
+composite Main {
+	graph
+	
+	stream<rstring name> DirScan = DirectoryScan() {                                                                                          
+      param                                                                                    
+        directory : dataDirectory();                                                               
+        pattern : ".*csv";                                                                   
+    }    
+    
+	stream<InputType> csvLineData = FileSource(DirScan){
+		param 
+			format : csv ;			
+	}
+	
+	stream<ScoredUtteranceType> scoredUtterances = DistanceModelScore(csvLineData){
+		param
+			testDataAttr : utterance;
+			modelPath : "/media/sf_vmshare/dev/streamsx.transcriptanalytics/machine.10.25.new.model.csv"; 
+			minSetSize : 5;
+	}
+	
+    stream<AvgScoredUtteranceType> aggScoredUtterances = Aggregate(scoredUtterances ) {  
+       logic state : {
+        	mutable ScoreContext ctx;
+        	float64 threshold = 0.9;
+       }                                                                               
+       window                                                                          
+        	scoredUtterances : sliding, time(60), count(1), partitioned, partitionAge(100.0);                               
+       param                                                                                                                                    
+       	 	partitionBy : ivrcallid,channel;                                                        
+       output                                                                          
+        	aggScoredUtterances : 
+        	   avgScore = Custom (init(ctx), process(scoredUtterances, ctx),result (ctx)) ;       	                
+    }      
+   
+   stream<AvgScoredUtteranceType, tuple<boolean isMachineChannel>> channelTypeDetermination = Functor(aggScoredUtterances) {    
+      output channelTypeDetermination:  
+      			isMachineChannel = (avgScore >= 0.9);
+       		
+ 	}
+
+   () as Sink = Custom(channelTypeDetermination) {    
+      logic onTuple channelTypeDetermination: {           
+             	println(channelTypeDetermination);             
+       		}
+ 	}
+
+}

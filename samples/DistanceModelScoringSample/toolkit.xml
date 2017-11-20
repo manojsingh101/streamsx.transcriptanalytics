@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<toolkitModel xmlns="http://www.ibm.com/xmlns/prod/streams/spl/toolkit" productVersion="4.2.0.0" xmlns:common="http://www.ibm.com/xmlns/prod/streams/spl/common" xmlns:ti="http://www.ibm.com/xmlns/prod/streams/spl/toolkitInfo" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+
+  <toolkit name="DistanceModelScoringSample" requiredProductVersion="4.2.0.0" version="1.0.0">
+    <description/>
+    <uriTable>
+      <uri index="1" value="sample/Main.spl"/>
+      <uri index="2" value="sample/DistanceModelScoringSample.spl"/>
+    </uriTable>
+    <namespace name="sample">
+      <compositeOp column="11" line="69" name="Main" potentialMain="true" uriIndex="1"/>
+      <function column="1" line="34" name="init" native="false" returnType="boolean" uriIndex="1">
+        <prototype>boolean init(mutable ScoreContext ctx)</prototype>
+        <parameter mutable="true" name="ctx" type="ScoreContext"/>
+      </function>
+      <function column="1" line="44" name="process" native="false" returnType="boolean" uriIndex="1">
+        <prototype>boolean process(tuple&lt;ScoredUtteranceType&gt; scoredUtterances, mutable ScoreContext ctx)</prototype>
+        <parameter name="scoredUtterances" type="tuple&lt;ScoredUtteranceType>"/>
+        <parameter mutable="true" name="ctx" type="ScoreContext"/>
+      </function>
+      <function column="1" line="55" name="result" native="false" returnType="float64" uriIndex="1">
+        <prototype>float64 result(ScoreContext ctx)</prototype>
+        <parameter name="ctx" type="ScoreContext"/>
+      </function>
+      <type column="6" line="22" name="ScoreContext" static="true" type="list&lt;float64> scoreList" uriIndex="1"/>
+      <type column="6" line="25" name="InputType" static="true" type="tuple&lt;rstring ivrcallid, rstring channel, rstring utterance>" uriIndex="1"/>
+      <type column="6" line="28" name="ScoredUtteranceType" static="true" type="InputType, tuple&lt;float64 score>" uriIndex="1"/>
+      <type column="6" line="31" name="AvgScoredUtteranceType" static="true" type="ScoredUtteranceType, tuple&lt;float64 avgScore>" uriIndex="1"/>
+    </namespace>
+    <dependency>
+      <common:name>com.ibm.streamsx.transcriptanalytics</common:name>
+      <common:version>1.0.0</common:version>
+    </dependency>
+    <sabFiles>
+      <ti:include path="toolkit.xml" root="toolkitDir"/>
+      <ti:include path="impl/java/lib/**" root="toolkitDir"/>
+      <ti:include path="impl/java/bin/**" root="toolkitDir"/>
+      <ti:include path="impl/bin/**" root="toolkitDir"/>
+      <ti:include path="impl/lib/**" root="toolkitDir"/>
+      <ti:include path="impl/nl/*.dat" root="toolkitDir"/>
+      <ti:include path="etc/**" root="toolkitDir"/>
+      <ti:include path="lib/**" root="toolkitDir"/>
+      <ti:include path="nl/**" root="toolkitDir"/>
+      <ti:include path="opt/**" root="toolkitDir"/>
+    </sabFiles>
+  </toolkit>
+
+</toolkitModel>
